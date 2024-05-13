@@ -1,6 +1,6 @@
 import time
 from typing import Annotated
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Response
 from fastapi.responses import StreamingResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import fastapi_poe as fp
@@ -30,8 +30,14 @@ def authenticate(auth_key):
             raise AuthenticationFailedException()
 
 
+@api_router.get("/")
+async def root():
+    return Response("running")
+
+
 @api_router.get("/status")
-async def status():
+async def status(authorization: Annotated[str | None, Header()] = None):
+    authenticate(auth_key=authorization)
     return {"status": "ok"}
 
 
