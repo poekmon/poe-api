@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "poe-api"
-version = "0.1.0"
+version = "0.0.1"
 description = ""
 authors = ["moeakwak <moeakwak@gmail.com>"]
 readme = "README.md"
