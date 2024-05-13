@@ -1,0 +1,44 @@
+version: 1
+formatters:
+  simple:
+    format: "%(asctime)s.%(msecs)03d %(levelname)8s: [%(name)s]\t%(message)s"
+    datefmt: '%Y/%m/%d %H:%M:%S'
+  proxy-output:
+    format: "%(message)s"
+    datefmt: '%Y/%m/%d %H:%M:%S'
+  colored:
+    (): colorlog.ColoredFormatter
+    format: "%(asctime)s.%(msecs)03d %(log_color)s%(levelname)8s%(reset)s: %(cyan)s[%(name)s]%(reset)s %(message)s"
+    datefmt: '%Y/%m/%d %H:%M:%S'
+handlers:
+  file_handler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: simple
+    encoding: utf-8
+    level: DEBUG
+    filename: log.txt
+    maxBytes: 10485760  # 10MB
+  console_handler:
+    class: logging.StreamHandler
+    formatter: colored
+    level: DEBUG
+
+root:
+  level: DEBUG
+  handlers: []
+loggers:
+  uvicorn.error:
+    level: INFO
+    handlers: [console_handler, file_handler]
+  uvicorn.access:
+    level: INFO
+    handlers: []  # disable uvicorn access log
+  poe_api:
+    level: DEBUG
+    handlers: [console_handler, file_handler]
+  sqlalchemy:
+    level: WARN
+    handlers: [console_handler, file_handler]
+  alembic:
+    level: INFO
+    handlers: [console_handler, file_handler]

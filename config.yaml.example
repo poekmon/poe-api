@@ -1,0 +1,6 @@
+poe_api_key: YOUR_API_KEY
+log_dir: logs
+log_level: INFO
+host: 0.0.0.0
+port: 8800
+auth_secret:
