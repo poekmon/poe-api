@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "poe-api"
+version = "0.1.0"
+description = ""
+authors = ["moeakwak <moeakwak@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.111.0"
+uvicorn = "^0.29.0"
+fastapi-poe = "^0.0.43"
+pydantic = "^2.7.1"
+tiktoken = "^0.6.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
