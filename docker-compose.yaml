@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  poe-api:
+    # platform: "linux/amd64"
+    container_name: poe-api
+    ports:
+      - "8810:8800"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml
+    working_dir: /app
+    image: poekmon/poe-api
