@@ -34,3 +34,8 @@ class InvalidRequestException(SelfDefinedException):
 class InternalException(SelfDefinedException):
     def __init__(self, message: str = ""):
         super().__init__(reason="errors.internal", message=message)
+
+
+class PoeBotException(SelfDefinedException):
+    def __init__(self, message: str = ""):
+        super().__init__(reason="errors.poeBot", message=message, code=400)

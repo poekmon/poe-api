@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import fastapi_poe as fp
 from poe_api.config import CONFIG
-from poe_api.exceptions import AuthenticationFailedException
+from poe_api.exceptions import AuthenticationFailedException, PoeBotException
 from poe_api.models import (
     OpenAIChatCompletionRequest,
     OpenAIChatCompletionResponse,
@@ -59,67 +59,71 @@ async def chat_completions(request: OpenAIChatCompletionRequest, authorization: 
     if request.temperature:
         extra_kwargs["temperature"] = request.temperature
 
-    if request.stream:
+    try:
+        if request.stream:
 
-        async def generate():
-            response_text = ""
-            async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
+            async def generate():
+                response_text = ""
+                async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
+                    chunk = OpenAIChatCompletionResponseChunk(
+                        id=response_id,
+                        object="chat.completion.chunk",
+                        choices=[
+                            OpenAIChatCompletionResponseChunkChoice(
+                                index=0, finish_reason=None, delta=OpenAIMessageResponse(role="assistant", content=partial.text)
+                            )
+                        ],
+                        created=int(time.time()),
+                        model=request.model,
+                    )
+                    response_text += partial.text
+                    yield f"data: {chunk.model_dump_json(exclude_unset=True)}\n\n"
+
                 chunk = OpenAIChatCompletionResponseChunk(
                     id=response_id,
                     object="chat.completion.chunk",
-                    choices=[
-                        OpenAIChatCompletionResponseChunkChoice(
-                            index=0, finish_reason=None, delta=OpenAIMessageResponse(role="assistant", content=partial.text)
-                        )
-                    ],
+                    choices=[OpenAIChatCompletionResponseChunkChoice(index=0, finish_reason="stop", delta=OpenAIMessageResponse())],
                     created=int(time.time()),
                     model=request.model,
                 )
-                response_text += partial.text
                 yield f"data: {chunk.model_dump_json(exclude_unset=True)}\n\n"
 
-            chunk = OpenAIChatCompletionResponseChunk(
-                id=response_id,
-                object="chat.completion.chunk",
-                choices=[OpenAIChatCompletionResponseChunkChoice(index=0, finish_reason="stop", delta=OpenAIMessageResponse())],
-                created=int(time.time()),
-                model=request.model,
-            )
-            yield f"data: {chunk.model_dump_json(exclude_unset=True)}\n\n"
+                # Send the final chunk with usage
+                usage = calculate_usage(request.messages, response_text)
+                chunk = OpenAIChatCompletionResponseChunk(
+                    id=response_id,
+                    object="chat.completion.chunk",
+                    choices=[],
+                    created=int(time.time()),
+                    model=request.model,
+                    usage=usage,
+                )
+                yield f"data: {chunk.model_dump_json()}\n\n"
 
-            # Send the final chunk with usage
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(generate(), media_type="text/event-stream")
+
+        else:
+            response_text = ""
+            async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
+                response_text += partial.text
+
             usage = calculate_usage(request.messages, response_text)
-            chunk = OpenAIChatCompletionResponseChunk(
-                id=response_id,
-                object="chat.completion.chunk",
-                choices=[],
+
+            response = OpenAIChatCompletionResponse(
+                id=gen_id(),
+                object="chat.completion",
+                choices=[
+                    OpenAIChatCompletionResponseChoice(
+                        index=0, finish_reason="stop", message=OpenAIMessageResponse(role="assistant", content=response_text)
+                    )
+                ],
                 created=int(time.time()),
                 model=request.model,
                 usage=usage,
             )
-            yield f"data: {chunk.model_dump_json()}\n\n"
+            return response
 
-            yield "data: [DONE]\n\n"
-
-        return StreamingResponse(generate(), media_type="text/event-stream")
-
-    else:
-        response_text = ""
-        async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
-            response_text += partial.text
-
-        usage = calculate_usage(request.messages, response_text)
-
-        response = OpenAIChatCompletionResponse(
-            id=gen_id(),
-            object="chat.completion",
-            choices=[
-                OpenAIChatCompletionResponseChoice(
-                    index=0, finish_reason="stop", message=OpenAIMessageResponse(role="assistant", content=response_text)
-                )
-            ],
-            created=int(time.time()),
-            model=request.model,
-            usage=usage,
-        )
-        return response
+    except fp.client.BotError as e:
+        raise PoeBotException(str(e))
