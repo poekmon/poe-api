@@ -17,6 +17,8 @@ class OpenAIChatCompletionRequest(BaseModel):
     model: str
     messages: List[OpenAIMessageRequest]
     stream: Optional[bool] = False
+    logit_bias: Optional[Dict[str, Any]] = None
+    temperature: Optional[float] = None
 
 
 class OpenAIChatCompletionResponseChoice(BaseModel):

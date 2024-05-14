@@ -53,11 +53,17 @@ async def chat_completions(request: OpenAIChatCompletionRequest, authorization: 
 
     response_id = gen_id()
 
+    extra_kwargs = {}
+    if request.logit_bias:
+        extra_kwargs["logit_bias"] = request.logit_bias
+    if request.temperature:
+        extra_kwargs["temperature"] = request.temperature
+
     if request.stream:
 
         async def generate():
             response_text = ""
-            async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY):
+            async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
                 chunk = OpenAIChatCompletionResponseChunk(
                     id=response_id,
                     object="chat.completion.chunk",
@@ -99,7 +105,7 @@ async def chat_completions(request: OpenAIChatCompletionRequest, authorization: 
 
     else:
         response_text = ""
-        async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY):
+        async for partial in fp.get_bot_response(messages=messages, bot_name=bot_name, api_key=API_KEY, **extra_kwargs):
             response_text += partial.text
 
         usage = calculate_usage(request.messages, response_text)
