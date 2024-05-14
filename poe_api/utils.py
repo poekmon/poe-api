@@ -37,9 +37,7 @@ def gen_id() -> str:
 
 
 def get_bot_name(model: str) -> str:
-    bot_name = openai_model_map.get(model)
-    if not bot_name:
-        raise ValueError(f"Unsupported model: {model}")
+    bot_name = openai_model_map.get(model, model)
     return bot_name
 
 
